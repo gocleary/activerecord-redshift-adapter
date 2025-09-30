@@ -100,6 +100,24 @@ module ActiveRecord
       include Redshift::SchemaStatements
       include Redshift::DatabaseStatements
 
+      # Rails 8 compatibility fix
+      # Rails 8's ActiveRecord::Calculations#execute_grouped_calculation (line 544) calls
+      # model.adapter_class.quote_column_name(aliaz) which is a CLASS method.
+      # The base implementation in ActiveRecord::ConnectionAdapters::Quoting::ClassMethods
+      # raises NotImplementedError.
+      #
+      # This causes groupdate gem queries and any GROUP BY calculations to fail with
+      # NotImplementedError when performing calculations like count() on grouped results.
+      #
+      # The instance method quote_column_name works correctly, so we delegate the class
+      # method to use the instance method via the active connection.
+      #
+      # Related: activerecord-8.0.3/lib/active_record/relation/calculations.rb:544
+      def self.quote_column_name(column_name)
+        # Delegate to the instance method which has the correct implementation
+        ActiveRecord::Base.connection.quote_column_name(column_name)
+      end
+
       def schema_creation # :nodoc:
         Redshift::SchemaCreation.new self
       end
