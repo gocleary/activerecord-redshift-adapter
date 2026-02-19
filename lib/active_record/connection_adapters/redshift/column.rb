@@ -9,8 +9,10 @@ module ActiveRecord
       mattr_reader :array, default: false
       alias array? array
 
-      def initialize(name, default, sql_type_metadata, null = true, default_function = nil, **)
-        super name, default, sql_type_metadata, null, default_function
+      # Rails 8.1.2 changed Column#initialize to expect cast_type as the 2nd argument.
+      # Previously the signature was (name, default, sql_type_metadata, null, ...).
+      def initialize(name, cast_type, default, sql_type_metadata = nil, null = true, default_function = nil, **)
+        super(name, cast_type, default, sql_type_metadata, null, default_function)
       end
     end
   end
