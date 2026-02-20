@@ -180,19 +180,18 @@ module ActiveRecord
         end
         alias exec_update exec_delete
 
-        def sql_for_insert(sql, pk, id_value, sequence_name, binds)
-          if pk.nil?
-            # Extract the table from the insert sql. Yuck.
-            table_ref = extract_table_ref_from_insert_sql(sql)
-            pk = primary_key(table_ref) if table_ref
-          end
-
-          sql = "#{sql} RETURNING #{quote_column_name(pk)}" if pk && use_insert_returning?
-
-          super
+        # Rails 8.1.2 changed the signature from (sql, pk, id_value, sequence_name, binds)
+        # to (sql, pk, binds, returning) and expects [sql, binds] as the return value.
+        # Redshift doesn't support RETURNING (use_insert_returning? returns false),
+        # so we simply pass through without modification.
+        def sql_for_insert(sql, pk, binds, returning)
+          [sql, binds]
         end
 
-        def exec_insert(sql, name, binds, pk = nil, sequence_name = nil)
+        # Rails 8.1.2 added the `returning:` keyword argument to exec_insert.
+        # Redshift doesn't support RETURNING (use_insert_returning? returns false),
+        # so we accept and ignore the keyword for compatibility.
+        def exec_insert(sql, name = nil, binds = [], pk = nil, sequence_name = nil, returning: nil)
           val = exec_query(sql, name, binds)
           if !use_insert_returning? && pk
             unless sequence_name
